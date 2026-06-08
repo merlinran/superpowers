@@ -41,6 +41,8 @@ digraph when_to_use {
 
 ## The Process
 
+**Before dispatching any implementers**, run the remaining-work process internally: parse the plan, intersect with `git diff`, and identify which items are missing or untested. Dispatch implementers only for gap items. Skip items already covered.
+
 ```dot
 digraph process {
     rankdir=TB;
@@ -237,6 +239,7 @@ Done!
 
 **Never:**
 - Start implementation on main/master branch without explicit user consent
+- Commit without referencing the plan item number in the commit message (e.g., "feat: implement <spec> item-N")
 - Skip reviews (spec compliance OR code quality)
 - Proceed with unfixed issues
 - Dispatch multiple implementation subagents in parallel (conflicts)
@@ -268,7 +271,8 @@ Done!
 
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
-- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:spec-to-plan** - Creates the plan this skill executes
+- **superpowers:remaining-work** - Identifies which plan items still need work
 - **superpowers:requesting-code-review** - Code review template for reviewer subagents
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
