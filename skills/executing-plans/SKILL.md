@@ -26,7 +26,7 @@ Before executing any items, run the remaining-work process internally to identif
 5. Execute only the gap items. Skip items already covered.
 
 ### Step 1: Load and Review Plan
-1. Read plan file
+1. Read plan file. If only a plan name is given, search existing `docs/plans/` or `plans/`.
 2. If the plan header includes **Source spec:** and **Architecture:** references, read those files for context before reviewing.
 3. Review critically - identify any questions or concerns about the plan
 4. If concerns: Raise them with your human partner before starting

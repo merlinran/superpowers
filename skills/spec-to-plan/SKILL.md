@@ -11,13 +11,15 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 
 **Announce at start:** "I'm using the spec-to-plan skill to create/update the implementation plan."
 
-**Save plans to:** `plans/<spec-base-name>.md`
+**Spec path lookup:** Search existing `docs/specs/` or `specs/`.
+
+**Save plans to:** existing `docs/plans/` or `plans/`; otherwise create `plans/`.
 - If CLAUDE.md sets `docs_repo`, plans are saved relative to that repo instead.
 
 ## How It Works
 
 1. Read the spec file and any architecture docs referenced in the spec.
-2. If a plan already exists at `plans/<spec-base-name>.md`:
+2. If a plan already exists there:
    - Determine the diff base (reuse session-cached branch from `remaining-work`, or present the same dynamic list: working tree, upstream, parent branch, defaults, manual).
    - `git diff <base>...HEAD -- <spec-file> <arch-docs>` to find changed sections.
    - Regenerate only plan items whose `Source:` header references changed sections.
@@ -119,7 +121,7 @@ If you find issues, fix them inline. If you find a spec requirement with no item
 
 ## Execution Handoff
 
-After saving the plan: **"Plan saved to `plans/<filename>.md`. Two execution options: 1. Subagent-Driven (recommended) or 2. Inline Execution. Which approach?"**
+After saving the plan: **"Plan saved to `<plan-path>`. Two execution options: 1. Subagent-Driven (recommended) or 2. Inline Execution. Which approach?"**
 
 **If Subagent-Driven:** Use superpowers:subagent-driven-development
 **If Inline:** Use superpowers:executing-plans

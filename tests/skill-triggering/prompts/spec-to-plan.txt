@@ -1,0 +1,1 @@
+I finished the auth system spec in docs/specs/auth-system.md. Can you turn it into an implementation plan?

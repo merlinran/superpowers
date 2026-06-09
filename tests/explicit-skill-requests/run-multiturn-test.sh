@@ -16,7 +16,7 @@ mkdir -p "$OUTPUT_DIR"
 
 # Create project directory (conversation is cwd-based)
 PROJECT_DIR="$OUTPUT_DIR/project"
-mkdir -p "$PROJECT_DIR/docs/superpowers/plans"
+mkdir -p "$PROJECT_DIR/docs/plans"
 
 echo "=== Multi-Turn Explicit Skill Request Test ==="
 echo "Output dir: $OUTPUT_DIR"
@@ -27,7 +27,7 @@ echo ""
 cd "$PROJECT_DIR"
 
 # Create a dummy plan file
-cat > "$PROJECT_DIR/docs/superpowers/plans/auth-system.md" << 'EOF'
+cat > "$PROJECT_DIR/docs/plans/auth-system.md" << 'EOF'
 # Auth System Implementation Plan
 
 ## Task 1: Add User Model
@@ -51,6 +51,7 @@ claude -p "I need to implement an authentication system. Let's plan this out. Th
     --dangerously-skip-permissions \
     --max-turns 2 \
     --output-format stream-json \
+    --verbose \
     > "$TURN1_LOG" 2>&1 || true
 
 echo "Turn 1 complete."
@@ -59,12 +60,13 @@ echo ""
 # Turn 2: Continue with more planning detail
 echo ">>> Turn 2: Continuing planning..."
 TURN2_LOG="$OUTPUT_DIR/turn2.json"
-claude -p "Good analysis. I've already written the plan to docs/superpowers/plans/auth-system.md. Now I'm ready to implement. What are my options for execution?" \
+claude -p "Good analysis. I've already written the plan to docs/plans/auth-system.md. Now I'm ready to implement. What are my options for execution?" \
     --continue \
     --plugin-dir "$PLUGIN_DIR" \
     --dangerously-skip-permissions \
     --max-turns 2 \
     --output-format stream-json \
+    --verbose \
     > "$TURN2_LOG" 2>&1 || true
 
 echo "Turn 2 complete."
@@ -79,6 +81,7 @@ claude -p "subagent-driven-development, please" \
     --dangerously-skip-permissions \
     --max-turns 2 \
     --output-format stream-json \
+    --verbose \
     > "$TURN3_LOG" 2>&1 || true
 
 echo "Turn 3 complete."

@@ -13,7 +13,7 @@ Report which plan items have code and test evidence in the current diff, without
 
 ## Inputs
 
-- Plan file path (required).
+- Plan file path (required). If only a plan name is given, search existing `docs/plans/` or `plans/`.
 - Diff base branch: if already cached in this session, reuse it. Otherwise present a dynamic list ordered by likelihood:
   1. Working tree (if relevant paths have uncommitted changes)
   2. `@{upstream}` (if set)

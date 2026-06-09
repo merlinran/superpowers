@@ -26,7 +26,7 @@ You MUST create a task for each of these items and complete them in order:
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `specs/<feature-name>.md` and `specs/arch/<system-part>.md` as appropriate. If a spec already exists at the target path, refine it rather than creating a new file. Commit.
+6. **Write design doc** — use existing `docs/specs/` or `specs/`; otherwise create `specs/`. Use the matching `arch/` subdirectory for architecture docs. If a spec already exists at the target path, refine it rather than creating a new file. Commit.
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to implementation** — invoke spec-to-plan skill to create implementation plan
@@ -108,7 +108,7 @@ digraph brainstorming {
 
 **Documentation:**
 
-- Write the validated design to `specs/<feature-name>.md` for behavioral specs, and update or create `specs/arch/<system-part>.md` for architecture decisions that emerged.
+- Write the validated design to existing `docs/specs/` or `specs/`; otherwise create `specs/`. Update or create the matching `arch/<system-part>.md` for architecture decisions that emerged.
   - If a spec or arch doc already exists at the target path, refine it in place rather than creating a new file.
   - If CLAUDE.md sets `docs_repo`, specs are saved relative to that repo instead of the code repo.
 - Use elements-of-style:writing-clearly-and-concisely skill if available

@@ -41,7 +41,7 @@ digraph when_to_use {
 
 ## The Process
 
-**Before dispatching any implementers**, run the remaining-work process internally: parse the plan, intersect with `git diff`, and identify which items are missing or untested. Dispatch implementers only for gap items. Skip items already covered.
+**Before dispatching any implementers**, run the remaining-work process internally: parse the plan, intersect with `git diff`, and identify which items are missing or untested. If only a plan name is given, search existing `docs/plans/` or `plans/`. Dispatch implementers only for gap items. Skip items already covered.
 
 ```dot
 digraph process {
@@ -132,7 +132,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
-[Read plan file once: docs/superpowers/plans/feature-plan.md]
+[Read plan file once: docs/plans/feature-plan.md]
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
 
