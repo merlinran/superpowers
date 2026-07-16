@@ -1,6 +1,6 @@
 ---
 name: spec-to-plan
-description: Use when you have a spec file and need to generate or update an implementation plan — derive numbered plan items from specs, incremental updates on spec changes
+description: Use when a spec needs a new implementation plan or an existing plan must be reconciled after spec or architecture changes
 ---
 
 # Spec-to-Plan
@@ -18,15 +18,18 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 
 ## How It Works
 
-1. Read the spec file and any architecture docs referenced in the spec.
-2. If a plan already exists there:
-   - Determine the diff base (reuse session-cached branch from `remaining-work`, or present the same dynamic list: working tree, upstream, parent branch, defaults, manual).
-   - `git diff <base>...HEAD -- <spec-file> <arch-docs>` to find changed sections.
-   - Regenerate only plan items whose `Source:` header references changed sections.
+1. Resolve the repository containing the spec. A relative `docs_repo` is relative to the code repository root. Run all source revision and diff commands in the resolved docs repository; never reuse a code-repository diff base.
+2. Require the spec and referenced architecture files to be committed, then read them and record the current docs-repository `HEAD` as their source revision.
+3. If a plan already exists there:
+   - Read the source revisions recorded in its header.
+   - If revisions are unchanged, preserve the plan verbatim.
+   - Otherwise, in the docs repository, diff each recorded revision against the current revision for its source file to find changed spec and architecture sections.
+   - Map every changed spec or architecture section to affected plan items. Existing `Sources:` references are the primary mapping; for a new section, identify the spec requirement or component it affects, then update or create the corresponding items and attach the new source reference.
    - Preserve untouched items verbatim.
    - Remove items whose source sections were deleted.
-3. If no plan exists: generate the full plan from the entire spec.
-4. Save the plan.
+   - If the plan has no source revisions, reconcile every item against the current spec and architecture once; preserve an existing item only after confirming its sources and requirements are current.
+4. If no plan exists: generate the full plan from the entire spec.
+5. Save the plan with current source revisions.
 
 ## Plan Document Format
 
@@ -36,6 +39,10 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 
 **Source spec:** specs/<feature>.md
 **Architecture:** specs/arch/<system-part>.md, ...
+**Source repository:** `<docs_repo value, or .>`
+**Source revisions:**
+- `specs/<feature>.md`: `<docs-repository-commit-sha>`
+- `specs/arch/<system-part>.md`: `<docs-repository-commit-sha>`
 
 > **For agentic workers:** Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan item-by-item. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -44,9 +51,11 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 
 **Plan item format:**
 ```markdown
-### Item N: [Component Name]
+### Task N: [Component Name]
 
-**Source:** specs/<feature>.md > "Section Name"
+**Sources:**
+- Spec: specs/<feature>.md > "Section Name"
+- Architecture: specs/arch/<system-part>.md > "API Contract"
 **Files:**
 - `src/path/to/file.py`
 - `tests/path/to/test_file.py` (unit)
@@ -107,6 +116,7 @@ git commit -m "feat: implement <spec> item-N"
 - **No placeholders:** Never write "TBD", "TODO", "implement later", "add error handling", "write tests for the above".
 - **Integration awareness:** For each item, identify interacting components and include integration tests where those interactions exist.
 - **Exact file paths always.**
+- **Exact source references always.** Every item names each applicable spec and architecture section so either kind of change can invalidate it.
 - **DRY, YAGNI, frequent commits.**
 
 ## Self-Review
@@ -114,8 +124,9 @@ git commit -m "feat: implement <spec> item-N"
 After writing the complete plan:
 
 1. **Spec coverage:** Skim each section in the spec. Can you point to a plan item that implements it? List any gaps.
-2. **Placeholder scan:** Search for red flags — "TBD", "TODO", "implement later", "add error handling", "write tests". Fix them.
-3. **Type consistency:** Do the types, signatures, and names in later items match earlier items? Fix any mismatches.
+2. **Architecture coverage:** Skim each architecture section with implementation impact. Can you point to every affected plan item through its `Sources:` references? Add missing references or items.
+3. **Placeholder scan:** Search for red flags — "TBD", "TODO", "implement later", "add error handling", "write tests". Fix them.
+4. **Type consistency:** Do the types, signatures, and names in later items match earlier items? Fix any mismatches.
 
 If you find issues, fix them inline. If you find a spec requirement with no item, add the item.
 

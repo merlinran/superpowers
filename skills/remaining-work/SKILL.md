@@ -1,20 +1,20 @@
 ---
 name: remaining-work
-description: Use when you have an implementation plan and want to check which plan items still need code — based on git diff, not full-codebase reads
+description: Use when an implementation plan may be partially complete and you need to identify missing, untested, or in-progress items
 ---
 
 # Remaining Work
 
 ## Overview
 
-Report which plan items have code and test evidence in the current diff, without reading the full codebase. Uses `git diff` and commit logs as the narrowing mechanism.
+Report which plan items have item-specific code and test evidence in the current tree. Use diffs and commit logs to narrow the inspection; never treat changed-path presence as proof of completion.
 
 **Announce at start:** "I'm using the remaining-work skill to check plan progress."
 
 ## Inputs
 
-- Plan file path (required). If only a plan name is given, search existing `docs/plans/` or `plans/`.
-- Diff base branch: if already cached in this session, reuse it. Otherwise present a dynamic list ordered by likelihood:
+- Plan file path (required). If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+- Diff base branch: if already cached for this code repository in this session, reuse it. Otherwise present a dynamic list ordered by likelihood:
   1. Working tree (if relevant paths have uncommitted changes)
   2. `@{upstream}` (if set)
   3. Parent branch (from `git reflog`: the branch HEAD was checked out from)
@@ -24,41 +24,55 @@ Report which plan items have code and test evidence in the current diff, without
 
 ## Process
 
-1. Parse the plan → extract all item numbers, descriptions, and file paths (both source and test files).
-2. `git diff <range> --name-only` → set of changed files.
-3. `git log <range> --oneline` → commit messages.
-4. For each plan item:
-   - Does any changed file match this item's source file paths? → code evidence.
-   - Does any changed file match this item's test file paths? → test evidence.
-   - Does any commit message reference this item number (e.g., "item-3", "item 3")? → commit evidence.
-5. Items with no code evidence → missing.
-6. Items with code evidence but no test evidence → untested.
-7. Items with both code and test evidence → covered.
+1. Parse the plan → extract all item/task numbers, descriptions, and file paths (both source and test files).
+2. Collect candidate evidence from every current-tree layer:
+   - `git diff <base>...HEAD --name-only` and `git log <base>...HEAD --oneline` for committed branch work.
+   - `git diff --cached --name-only` for staged work.
+   - `git diff --name-only` for unstaged work.
+   - `git ls-files --others --exclude-standard` for untracked work.
+3. For each item, inspect the current versions of only its declared source files, test files, interactions, and verification commands. A path match or item-numbered commit is a pointer to inspect, not completion evidence.
+4. Establish evidence tied to this item's behavior:
+   - **Code evidence:** the current source implements the behavior described by this item.
+   - **Test evidence:** a current test exercises that same item-specific behavior and the item's declared verification command passes.
+   - Shared files count only when the relevant behavior and test can be identified for this item.
+5. Classify the item:
+   - Behavior absent → missing.
+   - Behavior present but item-specific test absent → untested.
+   - Item-specific verification fails, or relevant working-tree changes are incomplete → in progress. This status applies whether the failing code is committed or uncommitted.
+   - Behavior and item-specific test both present → covered. Annotate when evidence is uncommitted.
+   - Declared paths or requirements are insufficient to decide, or verification fails outside this item's behavior → uncertain.
 
 ## Output
 
 ```markdown
 ## Remaining Work
 
-Based on `<range>`:
+Based on the current tree (narrowed by `<range>` plus working-tree changes):
 
 ### Items missing (no code evidence):
-- **Item 3: Password hashing** — `src/auth/hasher.py` not found in diff
-- **Item 5: Session timeout** — `src/auth/session.py` not found in diff
+- **Item 3: Password hashing** — item-specific behavior absent from `src/auth/hasher.py`
+- **Item 5: Session timeout** — declared source file does not exist
 
 ### Items untested (code present, test evidence missing):
-- **Item 4: Login endpoint** — `src/auth/login.py` found, but `tests/auth/test_login.py` not found in diff
+- **Item 4: Login endpoint** — behavior present in `src/auth/login.py`; no test exercises its lockout requirement
+
+### Items in progress:
+- **Item 6: Logout endpoint** — staged implementation present; item-specific test is incomplete
+
+### Items uncertain:
+- **Item 7: Audit logging** — declared files do not identify where this behavior is implemented
 
 ### Items covered:
-- Item 1: User model — code + tests matched via `src/auth/models.py`, `tests/auth/test_models.py`
-- Item 2: Registration endpoint — code + tests matched via commit "feat: implement user-auth item-2"
+- Item 1: User model — model behavior implemented and exercised by `tests/auth/test_models.py`
+- Item 2: Registration endpoint — registration behavior and its duplicate-email test are present in the shared auth files
 ```
 
 ## Constraints
 
-- Single context window operation. Never read the full codebase for gap analysis.
-- Does not modify anything — purely a reporter.
-- Coverage checking is about *presence*, not *fidelity*. Fidelity is a code review concern (`requesting-code-review` / `code-review`).
+- Single context window operation. Inspect only the files declared by each item; do not read the full codebase.
+- Does not edit the plan or source files. It may run the item's declared verification command to establish test evidence.
+- Coverage requires item-specific behavior and test evidence. Full implementation fidelity remains a code review concern (`requesting-code-review` / `code-review`).
+- Absence from `<base>...HEAD` is not absence from the current tree. Code merged into the base and dirty working-tree work must still be classified from targeted inspection.
 
 ## Integration
 

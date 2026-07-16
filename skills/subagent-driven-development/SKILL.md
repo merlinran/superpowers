@@ -44,7 +44,7 @@ digraph when_to_use {
 
 ## The Process
 
-**Before dispatching any implementers**, run the remaining-work process internally: parse the plan, intersect with `git diff`, and identify which items are missing or untested. If only a plan name is given, search existing `docs/plans/` or `plans/`. Dispatch implementers only for gap items. Skip items already covered.
+**Before every implementer, fixer, task-reviewer, or final-reviewer dispatch**, compute the plan revision with `git hash-object <plan-file>` and validate the Durable Progress ledger and dispatch artifacts against that revision, then run or refresh the remaining-work result. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository. Resolve the plan's source and architecture context through its `Source repository` header. A revision mismatch invalidates old task briefs, reports, and review packages as well as ledger entries; regenerate plan-derived artifacts before dispatch. Dispatch implementers for missing items. For untested items, preserve existing behavior and dispatch only the missing test and verification work unless the test exposes a defect. Resume and verify in-progress items, stop on uncertain items, and skip only covered items.
 
 ```dot
 digraph process {
@@ -62,12 +62,12 @@ digraph process {
         "Mark task complete in todo list and progress ledger" [shape=box];
     }
 
-    "Read plan, note context and global constraints, create todos" [shape=box];
+    "Read plan, validate ledger revision, classify items, create todos" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, note context and global constraints, create todos" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Read plan, validate ledger revision, classify items, create todos" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -239,6 +239,10 @@ and is re-read on every later turn. Hand artifacts over as files:
   (brief `…/task-N-brief.md` → report `…/task-N-report.md`) and put it in
   the dispatch prompt. The implementer writes the full report there and
   returns only status, commits, a one-line test summary, and concerns.
+- **Covered item after invalidation:** no implementer report is required when
+  `remaining-work` re-establishes coverage. If a later review needs execution
+  evidence, rerun the item's current verification command and write a fresh
+  revision-scoped report containing that command and output.
 - **Reviewer inputs:** the task reviewer gets three paths — the same brief
   file, the report file, and the review package — plus the global
   constraints that bind the task.
@@ -252,10 +256,12 @@ controllers that lost their place have re-dispatched entire completed task
 sequences — the single most expensive failure observed. Track progress in
 a ledger file, not only in todos.
 
-- At skill start, check for a ledger:
-  `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md"`. Tasks listed there
-  as complete are DONE — do not re-dispatch them; resume at the first task
-  not marked complete.
+- At skill start and before trusting the ledger for any later dispatch, compute `git hash-object <plan-file>`, then check the ledger:
+  `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md"`.
+- The ledger begins with both `Plan: <repo-relative-plan-path>` and
+  `Plan revision: <git-hash-object-output>`.
+- Trust completed task entries only when both ledger fields exactly match the current plan. A missing or mismatched field invalidates every task entry: replace the ledger header, re-evaluate every item against the current code and tests with `remaining-work`, and rebuild progress from that evidence.
+- After invalidation, do not reuse task briefs, reports, review packages, copied constraints, or reviewer findings derived from the old plan revision. Regenerate the current revision-scoped task brief and all downstream review evidence before dispatch.
 - When a task's review comes back clean, append one line to the ledger in
   the same message as your other bookkeeping:
   `Task N: complete (commits <base7>..<head7>, review clean)`.
@@ -390,7 +396,8 @@ Done!
   prompt
 - Move to next task while the review has open Critical/Important issues
 - Re-dispatch a task the progress ledger already marks complete — check
-  the ledger (and `git log`) after any compaction or resume
+  the ledger's plan path and revision first, then confirm its commits with
+  `git log` after any compaction or resume
 
 **If subagent asks questions:**
 - Answer clearly and completely

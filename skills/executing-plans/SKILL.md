@@ -19,15 +19,15 @@ Load plan, review critically, execute all tasks, report when complete.
 
 Before executing any items, run the remaining-work process internally to identify which plan items still need implementation:
 
-1. Parse the plan to extract item numbers and file paths.
+1. Parse the plan to extract item numbers, requirements, file paths, and verification commands.
 2. Determine the diff base (session-cached, or present the dynamic list: working tree, upstream, parent branch, defaults, manual).
-3. `git diff <base>...HEAD --name-only` and `git log <base>...HEAD --oneline`.
-4. Identify items with no code or test evidence — these are the gaps.
-5. Execute only the gap items. Skip items already covered.
+3. Apply the `remaining-work` evidence process, including committed, staged, unstaged, untracked, and targeted current-tree evidence.
+4. Execute every missing item. For an untested item, preserve its existing behavior and execute the missing test and verification steps; change implementation only if that test exposes a defect. Resume and verify in-progress items; stop and ask about uncertain items.
+5. Skip only covered items.
 
 ### Step 1: Load and Review Plan
-1. Read plan file. If only a plan name is given, search existing `docs/plans/` or `plans/`.
-2. If the plan header includes **Source spec:** and **Architecture:** references, read those files for context before reviewing.
+1. Read the plan file. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+2. Resolve the plan's **Source repository:** relative to the code repository root. Read **Source spec:** and **Architecture:** paths relative to that repository before reviewing.
 3. Review critically - identify any questions or concerns about the plan
 4. If concerns: Raise them with your human partner before starting
 5. If no concerns: Create todos for the plan items and proceed
