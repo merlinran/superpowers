@@ -14,6 +14,7 @@ Report which plan tasks have task-specific code and test evidence in the current
 ## Inputs
 
 - Plan file path (required). If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+- Task subset (optional). When a caller supplies task numbers for an incremental refresh, classify only those tasks and retain the caller's prior classifications for omitted tasks.
 - Diff base branch: if already cached for this code repository in this session, reuse it. Otherwise present a dynamic list ordered by likelihood:
   1. Working tree (if relevant paths have uncommitted changes)
   2. `@{upstream}` (if set)
@@ -24,7 +25,7 @@ Report which plan tasks have task-specific code and test evidence in the current
 
 ## Process
 
-1. Parse the plan → extract all task numbers, including legacy `Item N` headings, descriptions, and file paths (both source and test files). Always report the canonical `Task N` label.
+1. Parse the plan → extract all task numbers, including legacy `Item N` headings, descriptions, and file paths (both source and test files). Always report the canonical `Task N` label. If the caller supplied a task subset, restrict inspection, verification, and output to that subset.
 2. Collect candidate evidence from every current-tree layer:
    - `git diff <base>...HEAD --name-only` and `git log <base>...HEAD --oneline` for committed branch work.
    - `git diff --cached --name-only` for staged work.

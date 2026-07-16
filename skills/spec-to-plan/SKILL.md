@@ -19,7 +19,7 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 ## How It Works
 
 1. Resolve the repository containing the spec. A relative `docs_repo` is relative to the code repository root. Run all source revision and diff commands in the resolved docs repository; never reuse a code-repository diff base.
-2. Require the spec and referenced architecture files to be tracked and committed. Express every path relative to the docs repository, then run `git -C <docs-repository> ls-files --error-unmatch -- <spec-file> <architecture-files>` and `git -C <docs-repository> status --short -- <spec-file> <architecture-files>`. If either command fails or the status command prints anything, stop and ask your human partner to add and commit those files. Do not commit them yourself or create/update the plan. Then read the committed files and record the current docs-repository `HEAD` as their source revision.
+2. Require the spec and referenced architecture files to be tracked and committed. Express every path relative to the docs repository, then run `git -C <docs-repository> ls-files --error-unmatch -- <spec-file> <architecture-files>` and `git -C <docs-repository> status --short -- <spec-file> <architecture-files>`. If either command fails or the status command prints anything, stop and ask your human partner to add and commit those files. Do not commit them yourself or create/update the plan. Then read the committed files and record each file's last-modifying commit from `git -C <docs-repository> log -1 --format=%H -- <source-file>` as its source revision. Do not use repository `HEAD`: a plan-only commit must not invalidate unchanged sources.
 3. If a plan already exists there:
    - Read the source revisions recorded in its header.
    - If revisions are unchanged, preserve the plan verbatim.
@@ -130,9 +130,18 @@ After writing the complete plan:
 
 If you find issues, fix them inline. If you find a spec requirement with no task, add the task.
 
+## Human Review and Commit
+
+After self-review:
+
+1. Save the plan, then tell your human partner: **"Plan drafted at `<plan-path>`. Please review it; I will incorporate your changes and commit the approved plan before offering execution options."**
+2. Stop and wait. Do not offer an execution method or start implementation before explicit plan approval.
+3. If the human requests changes, update the plan, repeat Self-Review, and ask for review again.
+4. After explicit approval, inspect the plan path in the plan's repository. If it is untracked or differs from its committed version, run `git add <plan-file>`, then commit only that path with `git commit --only <plan-file> -m "docs: update <feature> implementation plan"`; verify that new commit contains the approved plan and no unrelated paths. If the plan is already tracked and unchanged, do not create an empty commit; verify it matches the committed copy and use `git log -1 --format=%H -- <plan-file>` to identify its existing commit.
+
 ## Execution Handoff
 
-After saving the plan: **"Plan saved to `<plan-path>`. Two execution options: 1. Subagent-Driven (recommended) or 2. Inline Execution. Which approach?"**
+Only after the approved plan commit is verified: **"Plan reviewed and committed as `<commit>`. Two execution options: 1. Subagent-Driven (recommended) or 2. Inline Execution. Which approach?"**
 
 **If Subagent-Driven:** Use superpowers:subagent-driven-development
 **If Inline:** Use superpowers:executing-plans

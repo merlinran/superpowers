@@ -57,11 +57,11 @@ At skill start:
    - Untested → preserve existing behavior and dispatch only missing test and verification work unless the test exposes a defect.
    - In progress → resume and verify the existing work.
    - Uncertain → stop and ask.
-   - Covered → skip.
+   - Covered → if its evidence is committed, ensure the ledger records `Task N: covered (verified at <head7>, remaining-work verification passed)`, then skip. If evidence is uncommitted, create a verify-and-commit todo: preserve the implementation, rerun its declared verification, and commit only the task-owned changes. If ownership or scope is uncertain, stop and ask. Never dispatch final review while uncommitted covered evidence remains unsettled.
 
 Before every implementer, fixer, task-reviewer, or final-reviewer dispatch, recompute the plan revision. If it changed, invalidate the ledger and all plan-derived dispatch artifacts, rerun `remaining-work`, and regenerate those artifacts before dispatch.
 
-When the plan revision is unchanged, do not rerun `remaining-work` before fixer, task-reviewer, re-reviewer, or final-reviewer dispatches. Refresh it before deciding whether another implementation task remains and, if so, which task is next, so shared-file work from earlier tasks can update the remaining classifications.
+When the plan revision is unchanged, do not rerun `remaining-work` before fixer, task-reviewer, re-reviewer, or final-reviewer dispatches. A task is settled only when its ledger entry records either an approved-review `<head7>` (clean or Minor findings pending) or a committed-evidence `verified at <head7>` baseline. Before deciding whether another implementation task remains, refresh (a) every unsettled task and (b) each settled task whose declared source, test, or interaction paths appear in `git diff <baseline>..HEAD --name-only`, staged, unstaged, or untracked changes. Retain every other settled task's prior classification and ledger entry, and do not rerun its verification command. After refreshing a selected task, replace its prior task entry with one current classification and baseline; committed covered evidence advances to `verified at <current-head7>`, while uncommitted evidence leaves it unsettled. This catches shared-file effects without repeatedly verifying unrelated completed work.
 
 ```dot
 digraph process {
@@ -74,13 +74,16 @@ digraph process {
         "Answer questions, provide context" [shape=box];
         "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
         "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [shape=box];
+        "Record every review finding in progress ledger" [shape=box];
+        "Exactly one valid review verdict that matches findings?" [shape=diamond];
+        "Re-dispatch reviewer for corrected verdict" [shape=box];
         "Spec requirements resolved and no Critical/Important findings?" [shape=diamond];
         "Dispatch fix subagent for spec gaps and Critical/Important findings" [shape=box];
-        "Record Minor findings; mark task complete in todo list and progress ledger" [shape=box];
+        "Mark task complete in todo list and progress ledger" [shape=box];
     }
 
     "Read plan, validate ledger revision, classify tasks, create todos" [shape=box];
-    "Refresh remaining-work and rebuild task todos" [shape=box];
+    "Refresh affected and unsettled tasks; rebuild task todos" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [shape=box];
     "All pending findings explicitly dispositioned?" [shape=diamond];
@@ -95,12 +98,16 @@ digraph process {
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
     "Implementer subagent implements, tests, commits, self-reviews" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)";
-    "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" -> "Spec requirements resolved and no Critical/Important findings?";
+    "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" -> "Record every review finding in progress ledger";
+    "Record every review finding in progress ledger" -> "Exactly one valid review verdict that matches findings?";
+    "Exactly one valid review verdict that matches findings?" -> "Re-dispatch reviewer for corrected verdict" [label="no"];
+    "Re-dispatch reviewer for corrected verdict" -> "Record every review finding in progress ledger";
+    "Exactly one valid review verdict that matches findings?" -> "Spec requirements resolved and no Critical/Important findings?" [label="yes"];
     "Spec requirements resolved and no Critical/Important findings?" -> "Dispatch fix subagent for spec gaps and Critical/Important findings" [label="no"];
     "Dispatch fix subagent for spec gaps and Critical/Important findings" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [label="re-review"];
-    "Spec requirements resolved and no Critical/Important findings?" -> "Record Minor findings; mark task complete in todo list and progress ledger" [label="yes"];
-    "Record Minor findings; mark task complete in todo list and progress ledger" -> "Refresh remaining-work and rebuild task todos";
-    "Refresh remaining-work and rebuild task todos" -> "More tasks remain?";
+    "Spec requirements resolved and no Critical/Important findings?" -> "Mark task complete in todo list and progress ledger" [label="yes"];
+    "Mark task complete in todo list and progress ledger" -> "Refresh affected and unsettled tasks; rebuild task todos";
+    "Refresh affected and unsettled tasks; rebuild task todos" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [label="no"];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" -> "All pending findings explicitly dispositioned?";
@@ -222,10 +229,14 @@ final whole-branch review. When you fill a reviewer template:
   later dispatches — a real session's dispatch hit 42k chars of which 99%
   was pasted history. A fresh subagent needs its task, the interfaces it
   touches, and the global constraints. Nothing else.
-- Dispatch fix subagents for Critical and Important findings. Record Minor
-  findings in the progress ledger as you go, and point the final
-  whole-branch review at that list so it can triage which must be fixed
-  before merge. A roll-up nobody reads is a silent discard.
+- In the same controller turn that receives a task review, record every finding
+  in the progress ledger before any fixer, reviewer, or other dispatch. Require
+  exactly one `Task quality` line with an allowed value that matches the spec
+  verdict and finding severities. If it is missing, duplicated, malformed, or
+  inconsistent, re-dispatch the reviewer for a corrected verdict before deciding task status.
+  Dispatch fix subagents for spec gaps and Critical or Important findings.
+  Leave Minor findings open for final whole-branch triage. Use the Durable
+  Progress finding format.
 - A finding labeled plan-mandated — or any finding that conflicts with
   what the plan's text requires — is the human's decision, like any plan
   contradiction: present the finding and the plan text, ask which governs.
@@ -289,18 +300,23 @@ a ledger file, not only in todos.
   `cat "<sdd-workspace>/progress.md"`.
 - The ledger begins with both `Plan: <path-from-code-repository-root>` and
   `Plan revision: <git-hash-object-output>`.
-- If no ledger exists, create it with those two header lines, in the listed order and one per line, before writing any task entry.
+- If no ledger exists, first check `git log` for task-numbered commits and inspect the plan's declared files for prior task execution evidence. Create a fresh ledger with those two header lines, in the listed order and one per line, only when neither check finds evidence. If either does, treat the ledger as lost or of unknown provenance: stop and ask your human partner to choose the review restart scope and base.
 - Normalize `Plan:` from the code repository root that owns `.superpowers/sdd/progress.md`. An external plan may therefore be recorded as `../docs-repo/plans/auth.md`.
-- Trust completed task entries only when both ledger fields exactly match the current plan. A missing or mismatched field invalidates every task entry: replace the ledger header, re-evaluate every task against the current code and tests with `remaining-work`, and rebuild progress from that evidence.
-- After invalidation, do not reuse task briefs, reports, review packages, or copied constraints derived from the old plan revision. Regenerate current revision-scoped dispatch evidence. Copy every unresolved reviewer finding — spec compliance or code quality, with its severity, task, and commit range — into the new ledger under `Pending review findings (revalidate)`. Before treating the affected task as complete, re-review every spec-compliance entry and every Critical or Important code-quality entry; only unresolved Minor code-quality entries may roll forward to final review. Pass those remaining entries to the final reviewer and write each disposition back to the ledger. If any entry is omitted or ambiguous, re-dispatch for an explicit disposition. `Still valid` remains open and enters the appropriate fix/re-review loop; before finishing, every entry is `fixed (commit ...)`, `not applicable (rationale ...)`, or `deferred by human (rationale ...)`.
-- When a task's review comes back clean, append one line to the ledger in
-  the same message as your other bookkeeping:
-  `Task N: complete (commits <base7>..<head7>, review clean)`.
+- Record each reviewer finding in the same controller turn that receives it, before another dispatch or any task-completion entry, as one line under `Pending review findings`: `Finding: open; severity=<Critical|Important|Minor|Unrated>; kind=<spec|quality>; task=<N>; commits=<base7>..<head7>; text=<verbatim finding>`. Update that line after fix and re-review; never rely on conversation memory as the only copy. Spec gaps without a reviewer-assigned severity use `Unrated`.
+- Trust completed task entries only when both ledger fields exactly match the current plan. A missing or mismatched field invalidates every task entry. Before replacing `progress.md`, copy every `Finding: open` line to `<sdd-workspace>/pending-findings.snapshot` and read the snapshot back. Write the replacement ledger in this order: current `Plan:` header, current `Plan revision:` header, `Pending review findings (revalidate)`, then every snapshotted finding. Read the replacement ledger back before deleting the snapshot. Only then re-evaluate every task with `remaining-work` and rebuild task entries from current evidence.
+- After invalidation, do not reuse task briefs, reports, review packages, or copied constraints derived from the old plan revision. Regenerate current revision-scoped dispatch evidence. Revalidate each snapshotted finding with a fresh task brief and constraints from the current plan plus a review package from its recorded `<base7>` through current `HEAD`; this deliberately includes later changes rather than omitting code that may affect the finding. Before treating the affected task as complete, re-review every spec-compliance entry and every Critical or Important code-quality entry; only unresolved Minor code-quality entries may roll forward to final review. Pass those remaining entries to the final reviewer and write each disposition back to the ledger. If any entry is omitted or ambiguous, re-dispatch for an explicit disposition. `Still valid` remains open and enters the appropriate fix/re-review loop; before finishing, every entry is `fixed (commit ...)`, `not applicable (rationale ...)`, or `deferred by human (rationale ...)`.
+- When a task review is approved, append its settled baseline in the same
+  message as your other bookkeeping. With no open findings, write
+  `Task N: complete (commits <base7>..<head7>, review clean)`. With only open
+  Minor findings, write `Task N: complete (commits <base7>..<head7>, review approved; Minor findings pending)`.
 - The ledger is your recovery map: the commits it names exist in git even
   when your context no longer remembers creating them. After compaction,
   trust the ledger and `git log` over your own recollection.
-- `git clean -fdx` will destroy the ledger (it's git-ignored scratch); if
-  that happens, recover from `git log`.
+- `git clean -fdx` will destroy the ledger and its review artifacts (they are
+  git-ignored scratch). Treat that as lost durable review state: stop and ask
+  your human partner to choose the review restart scope and base. Do not infer
+  pending findings from `git log`, automatically reconstruct partial reviews,
+  or finish until the human-directed review restart completes.
 
 ## Prompt Templates
 
@@ -417,7 +433,8 @@ Done!
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance (reviewer found spec issues = not done)
-- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Skip required review loops (spec gaps or Critical/Important findings = fix
+  and re-review; Minor findings = ledger entry and final review)
 - Let implementer self-review replace actual review (both are needed)
 - Tell a reviewer what not to flag, or pre-rate a finding's severity in the
   dispatch prompt ("treat it as Minor at most") — the plan's example code is
@@ -435,11 +452,15 @@ Done!
 - Provide additional context if needed
 - Don't rush them into implementation
 
-**If reviewer finds issues:**
+**If reviewer finds spec gaps or Critical/Important issues:**
 - Implementer (same subagent) fixes them
 - Reviewer reviews again
-- Repeat until approved
+- Repeat until spec compliant with no Critical/Important issues
 - Don't skip the re-review
+
+**If reviewer finds only Minor issues:**
+- Keep their ledger entries open for final review
+- Mark the task complete; Minor-only means `Task quality: Approved`
 
 **If subagent fails task:**
 - Dispatch fix subagent with specific instructions

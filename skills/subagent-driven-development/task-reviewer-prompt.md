@@ -133,6 +133,10 @@ Subagent (general-purpose):
     block), that IS a finding — report it as Important, labeled
     plan-mandated. The plan's authorship does not grade its own work; the
     human decides.
+    Set `Task quality` to `Needs fixes` exactly when spec compliance is ❌ or
+    at least one Critical or Important issue exists. Otherwise set it to
+    `Approved`, including reports with only Minor issues. A ⚠️ item does not
+    change the verdict by itself; the controller resolves it separately.
     Acknowledge what was done well before listing issues — accurate praise
     helps the implementer trust the rest of the feedback.
 
@@ -161,6 +165,8 @@ Subagent (general-purpose):
     ### Assessment
 
     **Task quality:** [Approved | Needs fixes]
+
+    Output exactly one `Task quality` line with one of those two values.
 
     **Reasoning:** [1-2 sentence technical assessment]
 ```

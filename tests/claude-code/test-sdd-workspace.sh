@@ -90,6 +90,33 @@ PLAN
             ;;
     esac
 
+    cat > "$repo/legacy-plan.md" <<'PLAN'
+# Legacy Plan
+
+## Item 1: First legacy thing
+
+Do the first legacy thing.
+
+## Item 2: Second legacy thing
+
+Do the second legacy thing.
+PLAN
+
+    local legacy_out legacy_path
+    if legacy_out="$(cd "$repo" && "$SDD_SCRIPTS/task-brief" legacy-plan.md 1 2>&1)"; then
+        legacy_path="$(printf '%s\n' "$legacy_out" | sed -n 's/^wrote \(.*\): [0-9][0-9]* lines$/\1/p')"
+        if [[ -f "$legacy_path" ]] \
+            && grep -q '^## Item 1: First legacy thing$' "$legacy_path" \
+            && ! grep -q '^## Item 2:' "$legacy_path"; then
+            pass "task-brief extracts one legacy Item task"
+        else
+            fail "task-brief extracts one legacy Item task"
+        fi
+    else
+        fail "task-brief extracts one legacy Item task"
+        echo "    output: $legacy_out"
+    fi
+
     local git_id=(-c user.email=t@example.com -c user.name=t -c commit.gpgsign=false)
     ( cd "$repo" \
         && git add plan.md \
