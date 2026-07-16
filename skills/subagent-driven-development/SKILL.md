@@ -44,7 +44,24 @@ digraph when_to_use {
 
 ## The Process
 
-**Before every implementer, fixer, task-reviewer, or final-reviewer dispatch**, compute the plan revision with `git hash-object <plan-file>` and validate the Durable Progress ledger and dispatch artifacts against that revision, then run or refresh the remaining-work result. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository. Resolve the plan's source and architecture context through its `Source repository` header. A revision mismatch invalidates old task briefs, reports, and review packages as well as ledger entries; regenerate plan-derived artifacts before dispatch. Dispatch implementers for missing items. For untested items, preserve existing behavior and dispatch only the missing test and verification work unless the test exposes a defect. Resume and verify in-progress items, stop on uncertain items, and skip only covered items.
+### Startup and Dispatch Checks
+
+At skill start:
+
+1. Record the code repository root from the current worktree. Run `scripts/sdd-workspace` and every later SDD helper (`scripts/task-brief`, `scripts/review-package`) from that root, and retain the returned workspace path. Do not change the helpers' working directory when the plan lives in `docs_repo`.
+2. Resolve the plan. If only a name is given, resolve `docs_repo` from CLAUDE.md when configured and search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+3. Resolve the plan's source and architecture context through its `Source repository` header.
+4. Compute the plan revision with `git hash-object <plan-file>` and validate the Durable Progress ledger.
+5. Run `remaining-work` once and create todos from its result:
+   - Missing → dispatch the full task.
+   - Untested → preserve existing behavior and dispatch only missing test and verification work unless the test exposes a defect.
+   - In progress → resume and verify the existing work.
+   - Uncertain → stop and ask.
+   - Covered → skip.
+
+Before every implementer, fixer, task-reviewer, or final-reviewer dispatch, recompute the plan revision. If it changed, invalidate the ledger and all plan-derived dispatch artifacts, rerun `remaining-work`, and regenerate those artifacts before dispatch.
+
+When the plan revision is unchanged, do not rerun `remaining-work` before fixer, task-reviewer, re-reviewer, or final-reviewer dispatches. Refresh it before deciding whether another implementation task remains and, if so, which task is next, so shared-file work from earlier tasks can update the remaining classifications.
 
 ```dot
 digraph process {
@@ -57,30 +74,42 @@ digraph process {
         "Answer questions, provide context" [shape=box];
         "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
         "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [shape=box];
-        "Task reviewer reports spec ✅ and quality approved?" [shape=diamond];
-        "Dispatch fix subagent for Critical/Important findings" [shape=box];
-        "Mark task complete in todo list and progress ledger" [shape=box];
+        "Spec requirements resolved and no Critical/Important findings?" [shape=diamond];
+        "Dispatch fix subagent for spec gaps and Critical/Important findings" [shape=box];
+        "Record Minor findings; mark task complete in todo list and progress ledger" [shape=box];
     }
 
-    "Read plan, validate ledger revision, classify items, create todos" [shape=box];
+    "Read plan, validate ledger revision, classify tasks, create todos" [shape=box];
+    "Refresh remaining-work and rebuild task todos" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [shape=box];
+    "All pending findings explicitly dispositioned?" [shape=diamond];
+    "Re-dispatch final reviewer for explicit dispositions" [shape=box];
+    "Final review clean?" [shape=diamond];
+    "Dispatch one final fix subagent; re-review" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, validate ledger revision, classify items, create todos" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Read plan, validate ledger revision, classify tasks, create todos" -> "More tasks remain?";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
     "Implementer subagent implements, tests, commits, self-reviews" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)";
-    "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" -> "Task reviewer reports spec ✅ and quality approved?";
-    "Task reviewer reports spec ✅ and quality approved?" -> "Dispatch fix subagent for Critical/Important findings" [label="no"];
-    "Dispatch fix subagent for Critical/Important findings" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [label="re-review"];
-    "Task reviewer reports spec ✅ and quality approved?" -> "Mark task complete in todo list and progress ledger" [label="yes"];
-    "Mark task complete in todo list and progress ledger" -> "More tasks remain?";
+    "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" -> "Spec requirements resolved and no Critical/Important findings?";
+    "Spec requirements resolved and no Critical/Important findings?" -> "Dispatch fix subagent for spec gaps and Critical/Important findings" [label="no"];
+    "Dispatch fix subagent for spec gaps and Critical/Important findings" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [label="re-review"];
+    "Spec requirements resolved and no Critical/Important findings?" -> "Record Minor findings; mark task complete in todo list and progress ledger" [label="yes"];
+    "Record Minor findings; mark task complete in todo list and progress ledger" -> "Refresh remaining-work and rebuild task todos";
+    "Refresh remaining-work and rebuild task todos" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [label="no"];
-    "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" -> "Use superpowers:finishing-a-development-branch";
+    "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" -> "All pending findings explicitly dispositioned?";
+    "All pending findings explicitly dispositioned?" -> "Re-dispatch final reviewer for explicit dispositions" [label="no"];
+    "Re-dispatch final reviewer for explicit dispositions" -> "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)";
+    "All pending findings explicitly dispositioned?" -> "Final review clean?" [label="yes"];
+    "Final review clean?" -> "Dispatch one final fix subagent; re-review" [label="no"];
+    "Dispatch one final fix subagent; re-review" -> "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)";
+    "Final review clean?" -> "Use superpowers:finishing-a-development-branch" [label="yes"];
 }
 ```
 
@@ -135,7 +164,7 @@ that implementer. Single-file mechanical fixes also take the cheapest tier.
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Generate the review package (`scripts/review-package BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the printed path.
+**DONE:** Generate the review package by invoking `<skill-directory>/scripts/review-package BASE HEAD` while the code repository root remains the working directory. It prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task. Then dispatch the task reviewer with the printed path.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
@@ -239,9 +268,9 @@ and is re-read on every later turn. Hand artifacts over as files:
   (brief `…/task-N-brief.md` → report `…/task-N-report.md`) and put it in
   the dispatch prompt. The implementer writes the full report there and
   returns only status, commits, a one-line test summary, and concerns.
-- **Covered item after invalidation:** no implementer report is required when
+- **Covered task after invalidation:** no implementer report is required when
   `remaining-work` re-establishes coverage. If a later review needs execution
-  evidence, rerun the item's current verification command and write a fresh
+  evidence, rerun the task's current verification command and write a fresh
   revision-scoped report containing that command and output.
 - **Reviewer inputs:** the task reviewer gets three paths — the same brief
   file, the report file, and the review package — plus the global
@@ -257,11 +286,13 @@ sequences — the single most expensive failure observed. Track progress in
 a ledger file, not only in todos.
 
 - At skill start and before trusting the ledger for any later dispatch, compute `git hash-object <plan-file>`, then check the ledger:
-  `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md"`.
-- The ledger begins with both `Plan: <repo-relative-plan-path>` and
+  `cat "<sdd-workspace>/progress.md"`.
+- The ledger begins with both `Plan: <path-from-code-repository-root>` and
   `Plan revision: <git-hash-object-output>`.
-- Trust completed task entries only when both ledger fields exactly match the current plan. A missing or mismatched field invalidates every task entry: replace the ledger header, re-evaluate every item against the current code and tests with `remaining-work`, and rebuild progress from that evidence.
-- After invalidation, do not reuse task briefs, reports, review packages, copied constraints, or reviewer findings derived from the old plan revision. Regenerate the current revision-scoped task brief and all downstream review evidence before dispatch.
+- If no ledger exists, create it with those two header lines, in the listed order and one per line, before writing any task entry.
+- Normalize `Plan:` from the code repository root that owns `.superpowers/sdd/progress.md`. An external plan may therefore be recorded as `../docs-repo/plans/auth.md`.
+- Trust completed task entries only when both ledger fields exactly match the current plan. A missing or mismatched field invalidates every task entry: replace the ledger header, re-evaluate every task against the current code and tests with `remaining-work`, and rebuild progress from that evidence.
+- After invalidation, do not reuse task briefs, reports, review packages, or copied constraints derived from the old plan revision. Regenerate current revision-scoped dispatch evidence. Copy every unresolved reviewer finding — spec compliance or code quality, with its severity, task, and commit range — into the new ledger under `Pending review findings (revalidate)`. Before treating the affected task as complete, re-review every spec-compliance entry and every Critical or Important code-quality entry; only unresolved Minor code-quality entries may roll forward to final review. Pass those remaining entries to the final reviewer and write each disposition back to the ledger. If any entry is omitted or ambiguous, re-dispatch for an explicit disposition. `Still valid` remains open and enters the appropriate fix/re-review loop; before finishing, every entry is `fixed (commit ...)`, `not applicable (rationale ...)`, or `deferred by human (rationale ...)`.
 - When a task's review comes back clean, append one line to the ledger in
   the same message as your other bookkeeping:
   `Task N: complete (commits <base7>..<head7>, review clean)`.
@@ -377,9 +408,9 @@ Done!
 
 **Never:**
 - Start implementation on main/master branch without explicit user consent
-- Commit without referencing the plan item number in the commit message (e.g., "feat: implement <spec> item-N")
+- Commit without referencing the plan task number in the commit message (e.g., "feat: implement <spec-name> task-N")
 - Skip reviews (spec compliance OR code quality)
-- Proceed with unfixed issues
+- Proceed with unfixed Critical/Important issues or silently discard Minor findings
 - Dispatch multiple implementation subagents in parallel (conflicts)
 - Make a subagent read the whole plan file (hand it its task brief —
   `scripts/task-brief` — instead)
@@ -419,7 +450,7 @@ Done!
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **superpowers:spec-to-plan** - Creates the plan this skill executes
-- **superpowers:remaining-work** - Identifies which plan items still need work
+- **superpowers:remaining-work** - Identifies which plan tasks still need work
 - **superpowers:requesting-code-review** - Code review template for reviewer subagents
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 

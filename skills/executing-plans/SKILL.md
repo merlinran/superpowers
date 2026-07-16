@@ -15,31 +15,33 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ## The Process
 
-### Step 0: Check Remaining Work
+### Step 0: Load and Review Plan
 
-Before executing any items, run the remaining-work process internally to identify which plan items still need implementation:
-
-1. Parse the plan to extract item numbers, requirements, file paths, and verification commands.
-2. Determine the diff base (session-cached, or present the dynamic list: working tree, upstream, parent branch, defaults, manual).
-3. Apply the `remaining-work` evidence process, including committed, staged, unstaged, untracked, and targeted current-tree evidence.
-4. Execute every missing item. For an untested item, preserve its existing behavior and execute the missing test and verification steps; change implementation only if that test exposes a defect. Resume and verify in-progress items; stop and ask about uncertain items.
-5. Skip only covered items.
-
-### Step 1: Load and Review Plan
 1. Read the plan file. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
 2. Resolve the plan's **Source repository:** relative to the code repository root. Read **Source spec:** and **Architecture:** paths relative to that repository before reviewing.
 3. Review critically - identify any questions or concerns about the plan
-4. If concerns: Raise them with your human partner before starting
-5. If no concerns: Create todos for the plan items and proceed
+4. If concerns: Raise them with your human partner and wait for resolution; then restart Step 0.
+5. If no concerns: proceed to remaining-work analysis
+
+### Step 1: Check Remaining Work
+
+After the plan review is clear, run the remaining-work process internally:
+
+1. Parse the plan to extract task numbers, requirements, file paths, and verification commands.
+2. Determine the diff base (session-cached, or present the dynamic list: working tree, upstream, parent branch, defaults, manual).
+3. Apply the `remaining-work` evidence process, including committed, staged, unstaged, untracked, and targeted current-tree evidence.
+4. Create todos for missing, untested, and in-progress tasks. Stop and ask about uncertain tasks. Omit covered tasks.
 
 ### Step 2: Execute Tasks
 
-For each task:
+For each todo:
 1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
-5. After committing each item, ensure the commit message references the plan item: `feat: implement <spec-name> item-N`
+2. For a missing task, follow all plan steps exactly.
+3. For an untested task, preserve existing behavior and execute the missing test and verification steps; change implementation only if the test exposes a defect.
+4. For an in-progress task, resume at the first incomplete or failing step.
+5. Run verifications as specified.
+6. Commit the verified task with a message that references it: `feat: implement <spec-name> task-N`.
+7. Mark as completed.
 
 ### Step 3: Complete Development
 
@@ -60,7 +62,7 @@ After all tasks complete and verified:
 
 ## When to Revisit Earlier Steps
 
-**Return to Review (Step 1) when:**
+**Return to Review (Step 0) when:**
 - Partner updates the plan based on your feedback
 - Fundamental approach needs rethinking
 
@@ -79,5 +81,5 @@ After all tasks complete and verified:
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **superpowers:spec-to-plan** - Creates the plan this skill executes
-- **superpowers:remaining-work** - Identifies which plan items still need work
+- **superpowers:remaining-work** - Identifies which plan tasks still need work
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
