@@ -504,11 +504,12 @@ a silent discard is forbidden.
 
 ### 5. Complete the task
 
-When the review comes back clean — or every open finding is parked with a
-ruling at the cap — append the completion line to the ledger in the same
-message as your other bookkeeping:
+When the review comes back clean — or only Minor findings remain open, or
+every open finding is parked with a ruling at the cap — append the
+completion line to the ledger in the same message as your other bookkeeping:
 
 - `Task <N>: complete (commits <base7>..<head7>, review clean)`
+- `Task <N>: complete (commits <base7>..<head7>, review approved; Minor findings pending)` with only open Minor findings
 - `Task <N>: complete (commits <base7>..<head7>, <K> parked)` after a
   tripped breaker
 
@@ -694,7 +695,7 @@ Done! Using superpowers:finishing-a-development-branch.
   dispatch prompt ("treat it as Minor at most") — the plan's example code is
   a starting point, not evidence that its weaknesses were chosen
 - Dispatch a task reviewer without a diff file — generate it first
-  (`scripts/review-package BASE HEAD`) and name the printed path in the
+  (`scripts/review-package PLAN_FILE BASE HEAD`) and name the printed path in the
   prompt
 - Move to next task while the review has open Critical/Important issues
 - Re-dispatch a task the progress ledger already marks complete — check
@@ -707,9 +708,10 @@ Done! Using superpowers:finishing-a-development-branch.
 - Don't rush them into implementation
 
 **If reviewer finds spec gaps or Critical/Important issues:**
-- Implementer (same subagent) fixes them
-- Reviewer reviews again
-- Repeat until spec compliant with no Critical/Important issues
+- Fix loop: rounds 1-3 resume the implementer; rounds 4-5 dispatch a fresh
+  implementer on a more capable model
+- Reviewer re-reviews after every fix round
+- Five rounds maximum, then adjudicate at the breaker
 - Don't skip the re-review
 
 **If reviewer finds only Minor issues:**
