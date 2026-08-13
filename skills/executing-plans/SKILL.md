@@ -11,17 +11,18 @@ Load plan, review critically, execute all tasks, report when complete.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-**Note:** Tell your human partner that Superpowers works much better with access to subagents. The quality of its work will be significantly higher if run on a platform with subagent support (Claude Code, Codex CLI, Codex App, and Copilot CLI all qualify; see the per-platform tool refs in `../using-superpowers/references/`). If subagents are available, use superpowers:subagent-driven-development instead of this skill.
+**Note:** Tell your human partner that Superpowers works much better with access to subagents (Claude Code, Codex CLI, Codex App, Copilot CLI, and Gemini CLI all qualify; see the per-platform tool refs in `../using-superpowers/references/`). If subagents are available, use superpowers:subagent-driven-development instead of this skill.
 
 ## The Process
 
 ### Step 0: Load and Review Plan
 
-1. Read the plan file. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
-2. Resolve the plan's **Source repository:** relative to the code repository root. Read **Source spec:** and **Architecture:** paths relative to that repository before reviewing.
-3. Review critically - identify any questions or concerns about the plan
-4. If concerns: Raise them with your human partner and wait for resolution; then restart Step 0.
-5. If no concerns: proceed to remaining-work analysis
+1. Ensure an isolated workspace: use superpowers:using-git-worktrees to create one or verify the existing one.
+2. Read the plan file. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+3. Resolve the plan's **Source repository:** relative to the code repository root. Read **Source spec:** and **Architecture:** paths relative to that repository before reviewing.
+4. Review critically - identify any questions or concerns about the plan
+5. If concerns: Raise them with your human partner and wait for resolution; then restart Step 0.
+6. If no concerns: proceed to remaining-work analysis
 
 ### Step 1: Check Remaining Work
 
