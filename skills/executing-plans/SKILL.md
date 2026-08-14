@@ -18,7 +18,7 @@ Load plan, review critically, execute all tasks, report when complete.
 ### Step 0: Load and Review Plan
 
 1. Ensure an isolated workspace: use superpowers:using-git-worktrees to create one or verify the existing one.
-2. Read the plan file. If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+2. Read the plan file. If only a plan name is given, resolve `docs_repo` from AGENTS.md or CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
 3. Resolve the plan's **Source repository:** relative to the code repository root. Read **Source spec:** and **Architecture:** paths relative to that repository before reviewing.
 4. Review critically - identify any questions or concerns about the plan
 5. If concerns: Raise them with your human partner and wait for resolution; then restart Step 0.

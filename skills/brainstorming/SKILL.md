@@ -100,7 +100,7 @@ your path and complete them in order.
 6. **Write design doc** — use existing `docs/specs/` or `specs/`; otherwise create `specs/`. Use the matching `arch/` subdirectory for architecture docs. If a spec already exists at the target path, refine it rather than creating a new file. Commit.
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke spec-to-plan skill to create implementation plan
+9. **Transition to implementation** — invoke spec-to-plan skill to create or update implementation plan
 
 ## Process Flow
 
@@ -205,7 +205,7 @@ is the whole process.
 
 - Write the validated design to existing `docs/specs/` or `specs/`; otherwise create `specs/`. Update or create the matching `arch/<system-part>.md` for architecture decisions that emerged.
   - If a spec or arch doc already exists at the target path, refine it in place rather than creating a new file.
-  - If CLAUDE.md sets `docs_repo`, specs are saved relative to that repo instead of the code repo.
+  - If AGENTS.md or CLAUDE.md sets `docs_repo`, specs are saved relative to that repo instead of the code repo.
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 

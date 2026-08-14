@@ -14,7 +14,7 @@ Read a spec and its referenced architecture docs, then generate or incrementally
 **Spec path lookup:** Search existing `docs/specs/` or `specs/`.
 
 **Save plans to:** existing `docs/plans/` or `plans/`; otherwise create `plans/`.
-- If CLAUDE.md sets `docs_repo`, plans are saved relative to that repo instead.
+- If AGENTS.md or CLAUDE.md sets `docs_repo`, plans are saved relative to that repo instead.
 
 ## How It Works
 

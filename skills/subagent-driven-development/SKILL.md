@@ -63,7 +63,7 @@ digraph when_to_use {
 At skill start:
 
 1. Record the code repository root from the current worktree. Run `scripts/sdd-workspace` and every later SDD helper (`scripts/task-brief`, `scripts/review-package`) from that root, and retain the returned workspace path. Do not change the helpers' working directory when the plan lives in `docs_repo`.
-2. Resolve the plan. If only a name is given, resolve `docs_repo` from CLAUDE.md when configured and search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+2. Resolve the plan. If only a name is given, resolve `docs_repo` from AGENTS.md or CLAUDE.md when configured and search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
 3. Resolve the plan's source and architecture context through its `Source repository` header.
 4. Compute the plan revision with `git hash-object <plan-file>` and validate the Durable Progress ledger.
 5. Run `remaining-work` once and create todos from its result:

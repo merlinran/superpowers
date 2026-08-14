@@ -13,7 +13,7 @@ Report which plan tasks have task-specific code and test evidence in the current
 
 ## Inputs
 
-- Plan file path (required). If only a plan name is given, resolve `docs_repo` from CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
+- Plan file path (required). If only a plan name is given, resolve `docs_repo` from AGENTS.md or CLAUDE.md when configured, then search that repository's existing `docs/plans/` or `plans/`; otherwise search the code repository.
 - Task subset (optional). When a caller supplies task numbers for an incremental refresh, classify only those tasks and retain the caller's prior classifications for omitted tasks.
 - Diff base branch: if already cached for this code repository in this session, reuse it. Otherwise present a dynamic list ordered by likelihood:
   1. Working tree (if relevant paths have uncommitted changes)
